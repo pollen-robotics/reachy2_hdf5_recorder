@@ -1,7 +1,11 @@
 import argparse
 import os
+import subprocess
 import time
 from glob import glob
+from pathlib import Path
+from queue import Queue
+from threading import Thread
 
 import cv2
 import h5py
@@ -43,6 +47,19 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+images_queue = Queue()
+
+
+def write_images_to_disk_worker():
+    while True:
+        image, path = images_queue.get()
+        cv2.imwrite(path, image)
+        images_queue.task_done()
+
+
+Thread(target=write_images_to_disk_worker, daemon=True).start()
+
+
 session_name = args.session_name + "_raw"
 session_path = os.path.join("data", session_name)
 os.makedirs(session_path, exist_ok=True)
@@ -53,7 +70,7 @@ episode_path = os.path.join(session_path, f"episode_{episode_id}.hdf5")
 
 
 # TODO these jpeg images are way too large
-cam = SDKWrapper(get_config_file_path("CONFIG_SR"), jpeg_output=True)
+cam = SDKWrapper(get_config_file_path("CONFIG_SR"), fps=args.sampling_rate)
 
 reachy = ReachySDK(args.robot_ip)
 
@@ -67,13 +84,20 @@ data_dict = {
 }
 
 for camera_name in camera_names:
-    data_dict[f"/observations/images/{camera_name}"] = []
+    data_dict[f"/observations/images_ids/{camera_name}"] = []
+    os.makedirs(f"{session_path}/images_episode_{episode_id}", exist_ok=True)
+
+# give time to the auto-exposure to stabilize
+for i in range(10):
+    cam_data, _, _ = cam.get_data()
 
 current_episode_length = 0
 start = time.time()
 print("Recording ...")
 elapsed = 0
+i = -1
 while time.time() - start < args.episode_length:
+    i += 1
     t = time.time() - start
     took_start = time.time()
 
@@ -128,27 +152,24 @@ while time.time() - start < args.episode_length:
 
     data_dict["/action"].append(list(action.values()))
     data_dict["/observations/qpos"].append(list(qpos.values()))
-    data_dict["/observations/images/cam_trunk"].append(list(left_rgb))
+    data_dict["/observations/images_ids/cam_trunk"].append(i)
+
+    images_queue.put(
+        (
+            left_rgb,
+            f"{session_path}/images_episode_{episode_id}/cam_trunk_{i}.png",
+        )
+    )
 
     took = time.time() - took_start
     if (1 / args.sampling_rate - took) < 0:
-        print(f"Warning: frame took {took} seconds to record, expect frame drop")
+        print(
+            f"Warning: frame took {round(took, 4)} seconds to record with {round(1/args.sampling_rate, 4)}s per frame budget, expect frame drop"
+        )
 
     time.sleep(max(0, 1 / args.sampling_rate - took))
 
 print("Done recording!")
-
-# Pad the data to have the same length
-# This assumes the images are compressed
-print("Padding images ...")
-for cam_name in camera_names:
-    max_len = max([len(x) for x in data_dict[f"/observations/images/{cam_name}"]])
-    for i in range(len(data_dict[f"/observations/images/{cam_name}"])):
-        image = data_dict[f"/observations/images/{cam_name}"][i]
-        if len(image) < max_len:
-            pad = np.zeros(max_len - len(image), dtype="uint8")
-            data_dict[f"/observations/images/{cam_name}"][i].extend(list(pad))
-
 
 print(f"Saving episode in {episode_path} ...")
 max_timesteps = len(data_dict["/action"])
@@ -159,22 +180,52 @@ with h5py.File(
 ) as root:
     root.attrs["compress"] = True
     obs = root.create_group("observations")
-    image = obs.create_group("images")
+    images_ids = obs.create_group("images_ids")
     for cam_name in camera_names:
-        padded_size = max(
-            [len(x) for x in data_dict[f"/observations/images/{cam_name}"]]
-        )
-
-        _ = image.create_dataset(
-            cam_name,
-            (max_timesteps, padded_size),
-            dtype="uint8",
-            chunks=(1, padded_size),
-        )
+        images_ids.create_dataset("cam_trunk", (max_timesteps,), dtype="int32")
     qpos = obs.create_dataset("qpos", (max_timesteps, 19))
     action = root.create_dataset("action", (max_timesteps, 19))
 
     for name, array in data_dict.items():
         root[name][...] = array
+
+
+print("Waiting for all images to be saved...")
+images_queue.join()  # Block until all tasks are done.
+
+
+def encode_video_frames(imgs_dir: Path, video_path: Path, fps: int, cam_name: str):
+    """More info on ffmpeg arguments tuning on `lerobot/common/datasets/_video_benchmark/README.md`"""
+    video_path = Path(video_path)
+    video_path.parent.mkdir(parents=True, exist_ok=True)
+
+    ffmpeg_cmd = (
+        f"ffmpeg -r {fps} "
+        "-f image2 "
+        "-loglevel error "
+        f"-i {str(imgs_dir)}/{cam_name}_%d.png "
+        "-vcodec libx264 "
+        "-g 2 "
+        "-pix_fmt yuv444p "
+        f"{str(video_path)}"
+    )
+
+    subprocess.run(ffmpeg_cmd.split(" "), check=True)
+
+
+print("Encoding video ...")
+for cam_name in camera_names:
+    encode_video_frames(
+        Path(f"{session_path}/images_episode_{episode_id}"),
+        Path(f"{session_path}/episode_{episode_id}_{cam_name}.mp4"),
+        args.sampling_rate,
+        cam_name,
+    )
+print("Done encoding video!")
+
+print("Removing raw images ...")
+for cam_name in camera_names:
+    for f in glob(f"{session_path}/images_episode_{episode_id}/{cam_name}_*.png"):
+        os.remove(f)
 
 print("Saved!")

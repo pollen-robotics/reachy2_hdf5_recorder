@@ -18,14 +18,15 @@ args = parser.parse_args()
 
 reachy = ReachySDK("localhost")
 data = h5py.File(args.episode, "r")
-# print(data["/action"])
 reachy.turn_on()
 time.sleep(1)
 
 # start = time.time()
 for i in range(len(data["/action"])):
     action = data["/action"][i]
-    image = cv2.imdecode(data["/observations/images/cam_trunk"][i], cv2.IMREAD_COLOR)
+    image_id = data["/observations/images_ids/cam_trunk"][i]
+
+    # image = cv2.imdecode(data["/observations/images/cam_trunk"][i], cv2.IMREAD_COLOR)
 
     reachy.head.neck.roll.goal_position = action[0]
     reachy.head.neck.pitch.goal_position = action[1]
