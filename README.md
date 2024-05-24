@@ -1,6 +1,7 @@
 # Reachy2 hdf5 recorder
 
-Records through SDK
+Records through SDK. 
+Right now there are issues with the trunk camera, so it needs to be plugged to the computer running the script.
 
 ## Installation
 
