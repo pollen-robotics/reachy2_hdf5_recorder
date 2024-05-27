@@ -1,5 +1,7 @@
 import argparse
+import os
 import time
+from pathlib import Path
 
 import cv2
 import h5py
@@ -16,6 +18,12 @@ parser.add_argument(
 )
 args = parser.parse_args()
 
+episode_parent = Path(args.episode).parent
+episode_id = Path(args.episode).stem
+cam_name = "cam_trunk"
+cap = cv2.VideoCapture(os.path.join(episode_parent, f"{episode_id}_{cam_name}.mp4"))
+
+# ret, image = cap.read()
 reachy = ReachySDK("localhost")
 data = h5py.File(args.episode, "r")
 reachy.turn_on()
@@ -24,6 +32,7 @@ time.sleep(1)
 # start = time.time()
 for i in range(len(data["/action"])):
     action = data["/action"][i]
+    _, image = cap.read()
     image_id = data["/observations/images_ids/cam_trunk"][i]
 
     # image = cv2.imdecode(data["/observations/images/cam_trunk"][i], cv2.IMREAD_COLOR)
