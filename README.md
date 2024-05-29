@@ -16,6 +16,10 @@ Not available on pypi, so you need to install the following packages manually:
 
 If on ubuntu 22.04, [compile gstreamer](compile_gstreamer.md) manually to have the right version : 1.22.8
 
+On higher versions of ubuntu, you can install gstreamer through apt https://gstreamer.freedesktop.org/documentation/installing/on-linux.html?gi-language=c
+
+TODO list plugins to install
+
 
 ## Usage
     
