@@ -12,6 +12,10 @@ pip install -r requirements.txt
 Not available on pypi, so you need to install the following packages manually:
 - pollen-vision on branch develop https://github.com/pollen-robotics/pollen-vision, only extra [depthai_wrapper] needed
 - reachy2_sdk https://github.com/pollen-robotics/reachy2-sdk
+- install https://github.com/pollen-robotics/gst-signalling-py
+
+If on ubuntu 22.04, [compile gstreamer](compile_gstreamer.md) manually to have the right version : 1.22.8
+
 
 ## Usage
     
