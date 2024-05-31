@@ -32,6 +32,8 @@ cargo install cargo-c
 cd <...>/gstreamer # cloned repo
 ```
 
+(You can add `--prefix=/opt/gstreamer` (for example) if you want to control where this is installed)
+
 ```bash
 meson setup --buildtype=release -Dauto_features=disabled -Dgstreamer:tools=enabled \
                     -Dtools=enabled -Drs=enabled -Dgst-plugins-rs:webrtc=enabled \
