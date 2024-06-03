@@ -215,8 +215,8 @@ with h5py.File(
     images_ids = obs.create_group("images_ids")
     for cam_name in camera_names:
         images_ids.create_dataset("cam_trunk", (max_timesteps,), dtype="int32")
-    qpos = obs.create_dataset("qpos", (max_timesteps, 19))
-    action = root.create_dataset("action", (max_timesteps, 19))
+    qpos = obs.create_dataset("qpos", (max_timesteps, 16))
+    action = root.create_dataset("action", (max_timesteps, 16))
 
     for name, array in data_dict.items():
         root[name][...] = array
