@@ -73,6 +73,39 @@ episode_path = os.path.join(session_path, f"episode_{episode_id}.hdf5")
 cam = SDKWrapper(get_config_file_path("CONFIG_SR"), fps=args.sampling_rate)
 
 reachy = ReachySDK(args.robot_ip)
+time.sleep(1)
+
+res = input("Turn robot on ? (y/N)")
+if res != "y":
+    print("Cancelling")
+    exit()
+
+reachy.turn_on()
+time.sleep(1)
+right_start_pose = np.array(
+    [
+        [0.0, -0.0, -1.0, 0.4],
+        [0.0, 1.0, -0.0, -0.24],
+        [1.0, 0.0, 0.0, -0.3],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+)
+left_start_pose = np.array(
+    [
+        [0.0, -0.0, -1.0, 0.4],
+        [0.0, 1.0, -0.0, 0.24],
+        [1.0, 0.0, 0.0, -0.3],
+        [0.0, 0.0, 0.0, 1.0],
+    ]
+)
+
+res = input("Goto rest position ? (y/N)")
+if res != "y":
+    print("Cancelling")
+    exit()
+
+reachy.r_arm.goto_from_matrix(right_start_pose, duration=6.0)
+reachy.l_arm.goto_from_matrix(left_start_pose, duration=6.0)
 
 time.sleep(1)
 
@@ -93,6 +126,7 @@ for i in range(10):
 
 current_episode_length = 0
 start = time.time()
+input("Press any key to start recording")
 print("Recording ...")
 elapsed = 0
 i = -1
@@ -125,7 +159,7 @@ while time.time() - start < args.episode_length:
         "r_arm_wrist_pitch": reachy.r_arm.wrist.pitch.goal_position,
         "r_arm_wrist_yaw": reachy.r_arm.wrist.yaw.goal_position,
         "r_gripper": np.rad2deg(reachy.r_arm.gripper._goal_position),
-        "l_gripper": np.rad2deg(reachy.l_arm.gripper._goal_position)
+        "l_gripper": np.rad2deg(reachy.l_arm.gripper._goal_position),
     }
 
     qpos = {
