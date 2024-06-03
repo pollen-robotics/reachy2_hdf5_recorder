@@ -124,8 +124,8 @@ while time.time() - start < args.episode_length:
         "r_arm_wrist_roll": reachy.r_arm.wrist.roll.goal_position,
         "r_arm_wrist_pitch": reachy.r_arm.wrist.pitch.goal_position,
         "r_arm_wrist_yaw": reachy.r_arm.wrist.yaw.goal_position,
-        "r_gripper": reachy.r_arm.gripper.opening,
-        "l_gripper": reachy.l_arm.gripper.opening,
+        "r_gripper": np.rad2deg(reachy.r_arm.gripper._goal_position),
+        "l_gripper": np.rad2deg(reachy.l_arm.gripper._goal_position)
     }
 
     qpos = {
@@ -146,8 +146,8 @@ while time.time() - start < args.episode_length:
         "r_arm_wrist_roll": reachy.r_arm.wrist.roll.present_position,
         "r_arm_wrist_pitch": reachy.r_arm.wrist.pitch.present_position,
         "r_arm_wrist_yaw": reachy.r_arm.wrist.yaw.present_position,
-        "r_gripper": reachy.r_arm.gripper.opening,  # replace by reachy.r_arm.gripper._goal_position ? is this in % too ?
-        "l_gripper": reachy.l_arm.gripper.opening,  # replace by reachy.r_arm.gripper._goal_position ? is this in % too ?
+        "r_gripper": np.rad2deg(reachy.r_arm.gripper._present_position),
+        "l_gripper": np.rad2deg(reachy.l_arm.gripper._present_position),
     }
 
     data_dict["/action"].append(list(action.values()))
