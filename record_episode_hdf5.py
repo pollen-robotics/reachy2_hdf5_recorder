@@ -26,7 +26,7 @@ parser.add_argument(
     "--sampling_rate",
     type=int,
     required=False,
-    default=30,
+    default=50,
     help="Sampling rate in Hz",
 )
 parser.add_argument(
@@ -125,11 +125,11 @@ for i in range(10):
     cam_data, _, _ = cam.get_data()
 
 current_episode_length = 0
-start = time.time()
 input("Press any key to start recording")
 print("Recording ...")
 elapsed = 0
 i = -1
+start = time.time()
 while time.time() - start < args.episode_length:
     i += 1
     t = time.time() - start
@@ -141,47 +141,45 @@ while time.time() - start < args.episode_length:
     # right_rgb = cam_data["right"]
 
     action = {
-        "head_roll": reachy.head.neck.roll.goal_position,
-        "head_pitch": reachy.head.neck.pitch.goal_position,
-        "head_yaw": reachy.head.neck.yaw.goal_position,
-        "l_arm_shoulder_pitch": reachy.l_arm.shoulder.pitch.goal_position,
-        "l_arm_shoulder_roll": reachy.l_arm.shoulder.roll.goal_position,
-        "l_arm_elbow_yaw": reachy.l_arm.elbow.yaw.goal_position,
-        "l_arm_elbow_pitch": reachy.l_arm.elbow.pitch.goal_position,
-        "l_arm_wrist_roll": reachy.l_arm.wrist.roll.goal_position,
-        "l_arm_wrist_pitch": reachy.l_arm.wrist.pitch.goal_position,
-        "l_arm_wrist_yaw": reachy.l_arm.wrist.yaw.goal_position,
-        "r_arm_shoulder_pitch": reachy.r_arm.shoulder.pitch.goal_position,
-        "r_arm_shoulder_roll": reachy.r_arm.shoulder.roll.goal_position,
-        "r_arm_elbow_yaw": reachy.r_arm.elbow.yaw.goal_position,
-        "r_arm_elbow_pitch": reachy.r_arm.elbow.pitch.goal_position,
-        "r_arm_wrist_roll": reachy.r_arm.wrist.roll.goal_position,
-        "r_arm_wrist_pitch": reachy.r_arm.wrist.pitch.goal_position,
-        "r_arm_wrist_yaw": reachy.r_arm.wrist.yaw.goal_position,
-        "r_gripper": np.rad2deg(reachy.r_arm.gripper._goal_position),
-        "l_gripper": np.rad2deg(reachy.l_arm.gripper._goal_position),
+        "l_arm_shoulder_pitch": np.deg2rad(reachy.l_arm.shoulder.pitch.goal_position),
+        "l_arm_shoulder_roll": np.deg2rad(reachy.l_arm.shoulder.roll.goal_position),
+        "l_arm_elbow_yaw": np.deg2rad(reachy.l_arm.elbow.yaw.goal_position),
+        "l_arm_elbow_pitch": np.deg2rad(reachy.l_arm.elbow.pitch.goal_position),
+        "l_arm_wrist_roll": np.deg2rad(reachy.l_arm.wrist.roll.goal_position),
+        "l_arm_wrist_pitch": np.deg2rad(reachy.l_arm.wrist.pitch.goal_position),
+        "l_arm_wrist_yaw": np.deg2rad(reachy.l_arm.wrist.yaw.goal_position),
+        "l_gripper": reachy.l_arm.gripper._goal_position,
+        "r_arm_shoulder_pitch": np.deg2rad(reachy.r_arm.shoulder.pitch.goal_position),
+        "r_arm_shoulder_roll": np.deg2rad(reachy.r_arm.shoulder.roll.goal_position),
+        "r_arm_elbow_yaw": np.deg2rad(reachy.r_arm.elbow.yaw.goal_position),
+        "r_arm_elbow_pitch": np.deg2rad(reachy.r_arm.elbow.pitch.goal_position),
+        "r_arm_wrist_roll": np.deg2rad(reachy.r_arm.wrist.roll.goal_position),
+        "r_arm_wrist_pitch": np.deg2rad(reachy.r_arm.wrist.pitch.goal_position),
+        "r_arm_wrist_yaw": np.deg2rad(reachy.r_arm.wrist.yaw.goal_position),
+        "r_gripper": reachy.r_arm.gripper._goal_position,
     }
 
     qpos = {
-        "head_roll": reachy.head.neck.roll.present_position,
-        "head_pitch": reachy.head.neck.pitch.present_position,
-        "head_yaw": reachy.head.neck.yaw.present_position,
-        "l_arm_shoulder_pitch": reachy.l_arm.shoulder.pitch.present_position,
-        "l_arm_shoulder_roll": reachy.l_arm.shoulder.roll.present_position,
-        "l_arm_elbow_yaw": reachy.l_arm.elbow.yaw.present_position,
-        "l_arm_elbow_pitch": reachy.l_arm.elbow.pitch.present_position,
-        "l_arm_wrist_roll": reachy.l_arm.wrist.roll.present_position,
-        "l_arm_wrist_pitch": reachy.l_arm.wrist.pitch.present_position,
-        "l_arm_wrist_yaw": reachy.l_arm.wrist.yaw.present_position,
-        "r_arm_shoulder_pitch": reachy.r_arm.shoulder.pitch.present_position,
-        "r_arm_shoulder_roll": reachy.r_arm.shoulder.roll.present_position,
-        "r_arm_elbow_yaw": reachy.r_arm.elbow.yaw.present_position,
-        "r_arm_elbow_pitch": reachy.r_arm.elbow.pitch.present_position,
-        "r_arm_wrist_roll": reachy.r_arm.wrist.roll.present_position,
-        "r_arm_wrist_pitch": reachy.r_arm.wrist.pitch.present_position,
-        "r_arm_wrist_yaw": reachy.r_arm.wrist.yaw.present_position,
-        "r_gripper": np.rad2deg(reachy.r_arm.gripper._present_position),
-        "l_gripper": np.rad2deg(reachy.l_arm.gripper._present_position),
+        "l_arm_shoulder_pitch": np.deg2rad(
+            reachy.l_arm.shoulder.pitch.present_position
+        ),
+        "l_arm_shoulder_roll": np.deg2rad(reachy.l_arm.shoulder.roll.present_position),
+        "l_arm_elbow_yaw": np.deg2rad(reachy.l_arm.elbow.yaw.present_position),
+        "l_arm_elbow_pitch": np.deg2rad(reachy.l_arm.elbow.pitch.present_position),
+        "l_arm_wrist_roll": np.deg2rad(reachy.l_arm.wrist.roll.present_position),
+        "l_arm_wrist_pitch": np.deg2rad(reachy.l_arm.wrist.pitch.present_position),
+        "l_arm_wrist_yaw": np.deg2rad(reachy.l_arm.wrist.yaw.present_position),
+        "l_gripper": reachy.l_arm.gripper._present_position,
+        "r_arm_shoulder_pitch": np.deg2rad(
+            reachy.r_arm.shoulder.pitch.present_position
+        ),
+        "r_arm_shoulder_roll": np.deg2rad(reachy.r_arm.shoulder.roll.present_position),
+        "r_arm_elbow_yaw": np.deg2rad(reachy.r_arm.elbow.yaw.present_position),
+        "r_arm_elbow_pitch": np.deg2rad(reachy.r_arm.elbow.pitch.present_position),
+        "r_arm_wrist_roll": np.deg2rad(reachy.r_arm.wrist.roll.present_position),
+        "r_arm_wrist_pitch": np.deg2rad(reachy.r_arm.wrist.pitch.present_position),
+        "r_arm_wrist_yaw": np.deg2rad(reachy.r_arm.wrist.yaw.present_position),
+        "r_gripper": reachy.r_arm.gripper._present_position,
     }
 
     data_dict["/action"].append(list(action.values()))
