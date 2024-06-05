@@ -14,6 +14,8 @@ from pollen_vision.camera_wrappers.depthai import SDKWrapper
 from pollen_vision.camera_wrappers.depthai.utils import get_config_file_path
 from reachy2_sdk import ReachySDK
 
+from gstreamer_recorder import GstRecorder, process_msg
+
 parser = argparse.ArgumentParser("Record teleop episodes")
 parser.add_argument(
     "-n",
@@ -70,8 +72,15 @@ cam = SDKWrapper(get_config_file_path("CONFIG_SR"), fps=args.sampling_rate)
 reachy = ReachySDK(args.robot_ip)
 time.sleep(1)
 
-
 camera_names = ["cam_trunk"]
+
+print("Connecting to gstreamer")
+recorder = GstRecorder(
+    "192.168.1.51",
+    8443,
+    None,
+    "robot",
+)
 try:
     while True:
         episode_id = len(glob(f"{session_path}/*.hdf5"))
@@ -93,6 +102,7 @@ try:
         current_episode_length = 0
         input("Press any key to start recording")
         print("Recording ...")
+        recorder.record()
         elapsed = 0
         i = -1
         start = time.time()
@@ -101,14 +111,10 @@ try:
             t = time.time() - start
             took_start = time.time()
 
-            # get_data_start = time.time()
             cam_data, _, _ = cam.get_data()
-            # print(f"get_data took {time.time() - get_data_start}")
 
             left_rgb = cam_data["left"]
             # right_rgb = cam_data["right"]
-
-            odom = reachy.mobile_base.odometry
 
             action = {
                 "l_arm_shoulder_pitch": np.deg2rad(
@@ -135,9 +141,6 @@ try:
                 "r_arm_wrist_pitch": np.deg2rad(reachy.r_arm.wrist.pitch.goal_position),
                 "r_arm_wrist_yaw": np.deg2rad(reachy.r_arm.wrist.yaw.goal_position),
                 "r_gripper": reachy.r_arm.gripper._goal_position,
-                "mobile_base_vx": odom["vx"],
-                "mobile_base_vy": odom["vy"],
-                "mobile_base_vtheta": odom["vtheta"],
             }
 
             qpos = {
@@ -177,9 +180,6 @@ try:
                 ),
                 "r_arm_wrist_yaw": np.deg2rad(reachy.r_arm.wrist.yaw.present_position),
                 "r_gripper": reachy.r_arm.gripper._present_position,
-                "mobile_base_vx": odom["vx"],
-                "mobile_base_vy": odom["vy"],
-                "mobile_base_vtheta": odom["vtheta"],
             }
 
             data_dict["/action"].append(list(action.values()))
@@ -202,6 +202,7 @@ try:
             time.sleep(max(0, 1 / args.sampling_rate - took))
 
         print("Done recording!")
+        recorder.stop()
 
         print(f"Saving episode in {episode_path} ...")
         max_timesteps = len(data_dict["/action"])
@@ -215,8 +216,8 @@ try:
             images_ids = obs.create_group("images_ids")
             for cam_name in camera_names:
                 images_ids.create_dataset("cam_trunk", (max_timesteps,), dtype="int32")
-            qpos = obs.create_dataset("qpos", (max_timesteps, 19))
-            action = root.create_dataset("action", (max_timesteps, 19))
+            qpos = obs.create_dataset("qpos", (max_timesteps, 16))
+            action = root.create_dataset("action", (max_timesteps, 16))
 
             for name, array in data_dict.items():
                 root[name][...] = array
@@ -260,7 +261,6 @@ try:
                 f"{session_path}/images_episode_{episode_id}/{cam_name}_*.png"
             ):
                 os.remove(f)
-            os.rmdir(f"{session_path}/images_episode_{episode_id}")
 
         print("Saved!")
 except KeyboardInterrupt:

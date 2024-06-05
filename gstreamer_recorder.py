@@ -1,4 +1,5 @@
 import argparse
+import time
 from typing import Optional
 
 import gi
@@ -161,13 +162,17 @@ def main() -> None:
 
     except KeyboardInterrupt:
         print("User exit")
+        time.sleep(1)
     finally:
         # Free resources
         recorder.stop()
+        time.sleep(1)
 
 
 if __name__ == "__main__":
     main()
+
+time.sleep(1)
 
 """
 This will create video_x.gdp streams. You can mux them using:
