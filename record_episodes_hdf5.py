@@ -108,7 +108,8 @@ try:
             left_rgb = cam_data["left"]
             # right_rgb = cam_data["right"]
 
-            odom = reachy.mobile_base.odometry
+            mobile_base_action = reachy.mobile_base.last_cmd_vel
+            mobile_base_pos = reachy.mobile_base.odometry
 
             action = {
                 "l_arm_shoulder_pitch": np.deg2rad(
@@ -135,9 +136,12 @@ try:
                 "r_arm_wrist_pitch": np.deg2rad(reachy.r_arm.wrist.pitch.goal_position),
                 "r_arm_wrist_yaw": np.deg2rad(reachy.r_arm.wrist.yaw.goal_position),
                 "r_gripper": reachy.r_arm.gripper._goal_position,
-                "mobile_base_vx": odom["vx"],
-                "mobile_base_vy": odom["vy"],
-                "mobile_base_vtheta": odom["vtheta"],
+                "mobile_base_vx": mobile_base_action["x"],
+                "mobile_base_vy": mobile_base_action["y"],
+                "mobile_base_vtheta": np.deg2rad(mobile_base_action["theta"]),
+                "head_roll": np.deg2rad(reachy.head.neck.roll.goal_position),
+                "head_pitch": np.deg2rad(reachy.head.neck.pitch.goal_position),
+                "head_yaw": np.deg2rad(reachy.head.neck.yaw.goal_position),
             }
 
             qpos = {
@@ -177,9 +181,12 @@ try:
                 ),
                 "r_arm_wrist_yaw": np.deg2rad(reachy.r_arm.wrist.yaw.present_position),
                 "r_gripper": reachy.r_arm.gripper._present_position,
-                "mobile_base_vx": odom["vx"],
-                "mobile_base_vy": odom["vy"],
-                "mobile_base_vtheta": odom["vtheta"],
+                "mobile_base_vx": mobile_base_pos["vx"],
+                "mobile_base_vy": mobile_base_pos["vy"],
+                "mobile_base_vtheta": np.deg2rad(mobile_base_pos["vtheta"]),
+                "head_roll": np.deg2rad(reachy.head.neck.roll.present_position),
+                "head_pitch": np.deg2rad(reachy.head.neck.pitch.present_position),
+                "head_yaw": np.deg2rad(reachy.head.neck.yaw.present_position),
             }
 
             data_dict["/action"].append(list(action.values()))
@@ -215,8 +222,8 @@ try:
             images_ids = obs.create_group("images_ids")
             for cam_name in camera_names:
                 images_ids.create_dataset("cam_trunk", (max_timesteps,), dtype="int32")
-            qpos = obs.create_dataset("qpos", (max_timesteps, 19))
-            action = root.create_dataset("action", (max_timesteps, 19))
+            qpos = obs.create_dataset("qpos", (max_timesteps, 22))
+            action = root.create_dataset("action", (max_timesteps, 22))
 
             for name, array in data_dict.items():
                 root[name][...] = array
