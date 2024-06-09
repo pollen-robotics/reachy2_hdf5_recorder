@@ -26,7 +26,7 @@ parser.add_argument(
     "--sampling_rate",
     type=int,
     required=False,
-    default=50,
+    default=30,
     help="Sampling rate in Hz",
 )
 parser.add_argument(
