@@ -10,8 +10,6 @@ from threading import Thread
 import cv2
 import h5py
 import numpy as np
-from pollen_vision.camera_wrappers.depthai import SDKWrapper
-from pollen_vision.camera_wrappers.depthai.utils import get_config_file_path
 
 # from reachy2_sdk import ReachySDK
 from reachy_sdk import ReachySDK
@@ -44,7 +42,7 @@ parser.add_argument(
     "--robot_ip",
     type=str,
     required=False,
-    default="localhost",
+    default="10.42.0.124",
     help="Robot IP address (default: localhost)",
 )
 args = parser.parse_args()
@@ -67,10 +65,15 @@ session_path = os.path.join("data", session_name)
 os.makedirs(session_path, exist_ok=True)
 
 
-reachy = ReachySDK(args.robot_ip)
-time.sleep(1)
-
-
+reachy = ReachySDK("10.42.0.124")
+reachy.turn_off_smoothly("r_arm")
+time.sleep(2)
+reachy.turn_on("r_arm")
+reachy.turn_on("head")
+reachy.joints.neck_roll.goal_position = 0
+reachy.joints.neck_pitch.goal_position = 0
+reachy.joints.neck_yaw.goal_position = 0
+reachy.turn_off("head")
 camera_names = ["cam_trunk"]
 try:
     while True:
@@ -87,7 +90,15 @@ try:
             os.makedirs(f"{session_path}/images_episode_{episode_id}", exist_ok=True)
 
         current_episode_length = 0
-        input("Press any key to start recording")
+        os.system('spd-say "ready?"')
+        time.sleep(1)
+        os.system('spd-say "3"')
+        time.sleep(1)
+        os.system('spd-say "2"')
+        time.sleep(1)
+        os.system('spd-say "1"')
+        time.sleep(1)
+        os.system('spd-say "start"')
         print("Recording ...")
         elapsed = 0
         i = -1
@@ -96,47 +107,12 @@ try:
             i += 1
             t = time.time() - start
             took_start = time.time()
-
-            left_rgb = reachy.left_camera.last_frame
-
+            left_rgb = reachy.right_camera.last_frame
             # TODO set reachy1 on the right branches to get this
             # mobile_base_action = reachy.mobile_base.last_cmd_vel
             # mobile_base_pos = reachy.mobile_base.odometry
 
-            action = {
-                "l_shoulder_pitch": np.deg2rad(
-                    reachy.joints.l_shoulder_pitch.goal_position
-                ),
-                "l_shoulder_roll": np.deg2rad(
-                    reachy.joints.l_shoulder_roll.goal_position
-                ),
-                "l_arm_yaw": np.deg2rad(reachy.joints.l_arm_yaw.goal_position),
-                "l_elbow_pitch": np.deg2rad(reachy.joints.l_elbow_pitch.goal_position),
-                "l_forearm_yaw": np.deg2rad(reachy.joints.l_forearm_yaw.goal_position),
-                "l_wrist_pitch": np.deg2rad(reachy.joints.l_wrist_pitch.goal_position),
-                "l_wrist_roll": np.deg2rad(reachy.joints.l_wrist_roll.goal_position),
-                "l_gripper": reachy.joints.l_gripper.goal_position,
-                "r_shoulder_pitch": np.deg2rad(
-                    reachy.joints.r_shoulder_pitch.goal_position
-                ),
-                "r_shoulder_roll": np.deg2rad(
-                    reachy.joints.r_shoulder_roll.goal_position
-                ),
-                "r_arm_yaw": np.deg2rad(reachy.joints.r_arm_yaw.goal_position),
-                "r_elbow_pitch": np.deg2rad(reachy.joints.r_elbow_pitch.goal_position),
-                "r_forearm_yaw": np.deg2rad(reachy.joints.r_forearm_yaw.goal_position),
-                "r_wrist_pitch": np.deg2rad(reachy.joints.r_wrist_pitch.goal_position),
-                "r_wrist_roll": np.deg2rad(reachy.joints.r_wrist_roll.goal_position),
-                "r_gripper": reachy.joints.r_gripper.goal_position,
-                # "mobile_base_vx": mobile_base_action["x"],
-                # "mobile_base_vy": mobile_base_action["y"],
-                # "mobile_base_vtheta": np.deg2rad(mobile_base_action["theta"]),
-                "neck_roll": np.deg2rad(reachy.joints.neck_roll.goal_position),
-                "neck_pitch": np.deg2rad(reachy.joints.neck_pitch.goal_position),
-                "neck_yaw": np.deg2rad(reachy.joints.neck_yaw.goal_position),
-            }
-
-            qpos = {
+            left_pos = {
                 "l_shoulder_pitch": np.deg2rad(
                     reachy.joints.l_shoulder_pitch.present_position
                 ),
@@ -147,14 +123,21 @@ try:
                 "l_elbow_pitch": np.deg2rad(
                     reachy.joints.l_elbow_pitch.present_position
                 ),
-                "l_forearm_yaw": np.deg2rad(
+                "l_forearm_yaw": -np.deg2rad(
                     reachy.joints.l_forearm_yaw.present_position
                 ),
-                "l_wrist_pitch": np.deg2rad(
+                "l_wrist_pitch": -np.deg2rad(
                     reachy.joints.l_wrist_pitch.present_position
                 ),
-                "l_wrist_roll": np.deg2rad(reachy.joints.l_wrist_roll.present_position),
-                "l_gripper": reachy.joints.l_gripper.present_position,
+                "l_wrist_roll": -np.deg2rad(
+                    reachy.joints.l_wrist_roll.present_position
+                ),
+                "l_gripper": -reachy.joints.l_gripper.present_position,
+                # "neck_roll": np.deg2rad(reachy.joints.neck_roll.present_position),
+                # "neck_pitch": np.deg2rad(reachy.joints.neck_pitch.present_position),
+                # "neck_yaw": np.deg2rad(reachy.joints.neck_yaw.present_position),
+            }
+            qpos = {
                 "r_shoulder_pitch": np.deg2rad(
                     reachy.joints.r_shoulder_pitch.present_position
                 ),
@@ -176,12 +159,36 @@ try:
                 # "mobile_base_vx": mobile_base_pos["vx"],
                 # "mobile_base_vy": mobile_base_pos["vy"],
                 # "mobile_base_vtheta": np.deg2rad(mobile_base_pos["vtheta"]),
-                "neck_roll": np.deg2rad(reachy.joints.neck_roll.present_position),
-                "neck_pitch": np.deg2rad(reachy.joints.neck_pitch.present_position),
-                "neck_yaw": np.deg2rad(reachy.joints.neck_yaw.present_position),
+                # "neck_roll": np.deg2rad(reachy.joints.neck_roll.present_position),
+                # "neck_pitch": np.deg2rad(reachy.joints.neck_pitch.present_position),
+                # "neck_yaw": np.deg2rad(reachy.joints.neck_yaw.present_position),
             }
+            reachy.joints.r_shoulder_pitch.goal_position = np.rad2deg(
+                left_pos["l_shoulder_pitch"]
+            )
+            reachy.joints.r_shoulder_roll.goal_position = np.rad2deg(
+                left_pos["l_shoulder_roll"]
+            )
+            reachy.joints.r_arm_yaw.goal_position = np.rad2deg(left_pos["l_arm_yaw"])
+            reachy.joints.r_elbow_pitch.goal_position = np.rad2deg(
+                left_pos["l_elbow_pitch"]
+            )
+            reachy.joints.r_forearm_yaw.goal_position = np.rad2deg(
+                left_pos["l_forearm_yaw"]
+            )
+            reachy.joints.r_wrist_pitch.goal_position = np.rad2deg(
+                left_pos["l_wrist_pitch"]
+            )
+            reachy.joints.r_wrist_roll.goal_position = np.rad2deg(
+                left_pos["l_wrist_roll"]
+            )
+            reachy.joints.r_gripper.goal_position = left_pos["l_gripper"]
+            # reachy.joints.neck_roll.goal_position = 0
+            # reachy.joints.neck_pitch.goal_position = 0
+            # reachy.joints.neck_yaw.goal_position = 0
 
-            data_dict["/action"].append(list(action.values()))
+            took = time.time() - took_start
+            data_dict["/action"].append(list(left_pos.values()))
             data_dict["/observations/qpos"].append(list(qpos.values()))
             data_dict["/observations/images_ids/cam_trunk"].append(i)
 
@@ -192,13 +199,8 @@ try:
                 )
             )
 
-            took = time.time() - took_start
-            if (1 / args.sampling_rate - took) < 0:
-                print(
-                    f"Warning: frame took {round(took, 4)} seconds to record with {round(1/args.sampling_rate, 4)}s per frame budget, expect frame drop"
-                )
-
             time.sleep(max(0, 1 / args.sampling_rate - took))
+        os.system('spd-say "stop"')
 
         print("Done recording!")
 
@@ -215,10 +217,10 @@ try:
             for cam_name in camera_names:
                 images_ids.create_dataset("cam_trunk", (max_timesteps,), dtype="int32")
             qpos = obs.create_dataset(
-                "qpos", (max_timesteps, 19)
+                "qpos", (max_timesteps, 8)
             )  # TODO change this to 22 when adding mobile base
             action = root.create_dataset(
-                "action", (max_timesteps, 19)
+                "action", (max_timesteps, 8)
             )  # TODO change this to 22 when adding mobile base
 
             for name, array in data_dict.items():
