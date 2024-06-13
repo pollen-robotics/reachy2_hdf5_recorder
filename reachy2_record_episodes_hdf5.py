@@ -14,6 +14,8 @@ from pollen_vision.camera_wrappers.depthai import SDKWrapper
 from pollen_vision.camera_wrappers.depthai.utils import get_config_file_path
 from reachy2_sdk import ReachySDK
 
+from utils import GripperInput, play_sound
+
 parser = argparse.ArgumentParser("Record teleop episodes")
 parser.add_argument(
     "-n",
@@ -45,6 +47,12 @@ parser.add_argument(
     default="localhost",
     help="Robot IP address (default: localhost)",
 )
+parser.add_argument(
+    "-g",
+    "--gripper_input",
+    action="store_true",
+    default=False,
+)
 args = parser.parse_args()
 
 images_queue = Queue()
@@ -70,6 +78,9 @@ cam = SDKWrapper(get_config_file_path("CONFIG_SR"), fps=args.sampling_rate)
 reachy = ReachySDK(args.robot_ip)
 time.sleep(1)
 
+if args.gripper_input:
+    gripper_input = GripperInput(reachy)
+
 
 camera_names = ["cam_trunk"]
 try:
@@ -90,8 +101,18 @@ try:
         for i in range(10):
             cam_data, _, _ = cam.get_data()
 
+        # Ready sound
+        play_sound(0.1, 400)
+        play_sound(0.1, 500)
+        play_sound(0.1, 600)
         current_episode_length = 0
-        input("Press any key to start recording")
+        if not args.gripper_input:
+            input("Press any key to start recording")
+        else:
+            print("Close the right gripper for 2 seconds to start recording ...")
+            while not gripper_input.right_input():
+                time.sleep(0.1)
+            play_sound(0.5, 600)  # start recording sound
         print("Recording ...")
         elapsed = 0
         i = -1
@@ -101,12 +122,9 @@ try:
             t = time.time() - start
             took_start = time.time()
 
-            # get_data_start = time.time()
             cam_data, _, _ = cam.get_data()
-            # print(f"get_data took {time.time() - get_data_start}")
 
             left_rgb = cam_data["left"]
-            # right_rgb = cam_data["right"]
 
             mobile_base_action = reachy.mobile_base.last_cmd_vel
             mobile_base_pos = reachy.mobile_base.odometry
@@ -209,6 +227,9 @@ try:
             time.sleep(max(0, 1 / args.sampling_rate - took))
 
         print("Done recording!")
+        # Done recording sound
+        play_sound(0.1, 600)
+        play_sound(0.1, 600)
 
         print(f"Saving episode in {episode_path} ...")
         max_timesteps = len(data_dict["/action"])
