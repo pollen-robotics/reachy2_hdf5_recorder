@@ -10,8 +10,6 @@ from threading import Thread
 import cv2
 import h5py
 import numpy as np
-from pollen_vision.camera_wrappers.depthai import SDKWrapper
-from pollen_vision.camera_wrappers.depthai.utils import get_config_file_path
 from reachy2_sdk import ReachySDK
 
 from utils import GripperInput, play_sound
@@ -72,9 +70,6 @@ session_name = args.session_name + "_raw"
 session_path = os.path.join("data", session_name)
 os.makedirs(session_path, exist_ok=True)
 
-
-cam = SDKWrapper(get_config_file_path("CONFIG_SR"), fps=args.sampling_rate)
-
 reachy = ReachySDK(args.robot_ip)
 time.sleep(1)
 
@@ -82,7 +77,7 @@ if args.gripper_input:
     gripper_input = GripperInput(reachy)
 
 
-camera_names = ["cam_trunk"]
+camera_names = ["cam_trunk", "cam_teleop"]
 try:
     while True:
         episode_id = len(glob(f"{session_path}/*.hdf5"))
@@ -96,10 +91,6 @@ try:
         for camera_name in camera_names:
             data_dict[f"/observations/images_ids/{camera_name}"] = []
             os.makedirs(f"{session_path}/images_episode_{episode_id}", exist_ok=True)
-
-        # give time to the auto-exposure to stabilize
-        for i in range(10):
-            cam_data, _, _ = cam.get_data()
 
         # Ready sound
         play_sound(0.1, 400)
@@ -122,11 +113,20 @@ try:
             t = time.time() - start
             took_start = time.time()
 
-            cam_data, _, _ = cam.get_data()
+            # Acquire frames
+            # TODO do something with the timestamps
+            frames = {}
 
-            left_rgb = cam_data["left"]
+            get_frames_start = time.time()
+            rgb_trunk, ts_trunk = reachy.cameras.depth.get_frame()
+            rgb_teleop, ts_teleop = reachy.cameras.teleop.get_frame()
+            print("get frames took", time.time() - get_frames_start)
 
-            mobile_base_action = reachy.mobile_base.last_cmd_vel
+            frames["cam_trunk"] = {"frame": rgb_trunk, "ts": ts_trunk}
+            frames["cam_teleop"] = {"frame": rgb_teleop, "ts": ts_teleop}
+
+            # mobile_base_action = reachy.mobile_base.last_cmd_vel
+            mobile_base_action = {"x": 0, "y": 0, "theta": 0}  # TMP
             mobile_base_pos = reachy.mobile_base.odometry
 
             action = {
@@ -209,14 +209,16 @@ try:
 
             data_dict["/action"].append(list(action.values()))
             data_dict["/observations/qpos"].append(list(qpos.values()))
-            data_dict["/observations/images_ids/cam_trunk"].append(i)
 
-            images_queue.put(
-                (
-                    left_rgb,
-                    f"{session_path}/images_episode_{episode_id}/cam_trunk_{i}.png",
+            for cam_name in camera_names:
+                data_dict[f"/observations/images_ids/{cam_name}"].append(i)
+                frame = frames[cam_name]["frame"]
+                images_queue.put(
+                    (
+                        frame,
+                        f"{session_path}/images_episode_{episode_id}/{cam_name}_{i}.png",
+                    )
                 )
-            )
 
             took = time.time() - took_start
             if (1 / args.sampling_rate - took) < 0:
@@ -227,7 +229,6 @@ try:
             time.sleep(max(0, 1 / args.sampling_rate - took))
 
         print("Done recording!")
-        # Done recording sound
         play_sound(0.1, 600)
         play_sound(0.1, 600)
 
@@ -242,7 +243,7 @@ try:
             obs = root.create_group("observations")
             images_ids = obs.create_group("images_ids")
             for cam_name in camera_names:
-                images_ids.create_dataset("cam_trunk", (max_timesteps,), dtype="int32")
+                images_ids.create_dataset(cam_name, (max_timesteps,), dtype="int32")
             qpos = obs.create_dataset("qpos", (max_timesteps, 22))
             action = root.create_dataset("action", (max_timesteps, 22))
 
@@ -288,7 +289,10 @@ try:
                 f"{session_path}/images_episode_{episode_id}/{cam_name}_*.png"
             ):
                 os.remove(f)
-            os.rmdir(f"{session_path}/images_episode_{episode_id}")
+            try:
+                os.rmdir(f"{session_path}/images_episode_{episode_id}")
+            except:
+                pass
 
         print("Saved!")
 except KeyboardInterrupt:
