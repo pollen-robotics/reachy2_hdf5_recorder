@@ -125,8 +125,8 @@ try:
             frames["cam_trunk"] = {"frame": rgb_trunk, "ts": ts_trunk}
             frames["cam_teleop"] = {"frame": rgb_teleop, "ts": ts_teleop}
 
-            # mobile_base_action = reachy.mobile_base.last_cmd_vel
-            mobile_base_action = {"x": 0, "y": 0, "theta": 0}  # TMP
+            mobile_base_action = reachy.mobile_base.last_cmd_vel
+            # mobile_base_action = {"x": 0, "y": 0, "theta": 0}  # TMP
             mobile_base_pos = reachy.mobile_base.odometry
 
             action = {
